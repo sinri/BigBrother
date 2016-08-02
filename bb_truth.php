@@ -14,12 +14,17 @@ class BigBrotherTruth
                 # code...
         }
 
-        public static test(){
-               echo "CPU Cores: ".BigBrotherTruth::check_cpu_cores().PHP_EOL;
+        public static function test(){
+                echo "CPU Cores: ".BigBrotherTruth::check_cpu_cores().PHP_EOL;
 
-                $keyword='php';
+                $keyword='php|python|java|tomcat';
                 $list=BigBrotherTruth::check_process($keyword);
                 print_r($list); 
+
+                //php
+                //python
+                //java
+                //tomcat
         }
 
 
@@ -30,7 +35,7 @@ class BigBrotherTruth
         }
 
         public static function check_process($keyword){
-                $last_line=exec("ps aux|grep ".escapeshellarg($keyword),$output,$ret);
+                $last_line=exec("ps aux|egrep ".escapeshellarg($keyword),$output,$ret);
                 // print_r($output);
                 $list=array();
                 foreach($output as $line){
@@ -59,27 +64,18 @@ class BigBrotherTruth
                 return $list;
         }
 
+        public static function getCurrentClientStatus(){
+                $config=BigBrotherPeace::getConfig();
+                $client_name=$config['client_name'];
+                $keyword=$config['client_keyword'];
+                $plist=BigBrotherTruth::check_process($keyword);
+                $cpu_cores=BigBrotherTruth::check_cpu_cores();
+                $info=array(
+                        'cpu_cores'=>$cpu_cores,
+                        'process_list'=>$plist,
+                        'timestamp'=>date('Y-m-d H:i:s'),
+                        'client_name'=>$client_name,
+                );
+                return $info;
+        }
 }
-/*
-CREATE TABLE `server_process_cache` (
-        `rec_id` int(11) NOT NULL AUTO_INCREMENT,
-        `server_name` varchar(64) NOT NULL,
-        `server_ip` varchar(16) NOT NULL,
-        `ping_time` datetime NOT NULL,
-        `user` varchar(32) NOT NULL,
-        `pid` varchar(32) NOT NULL,
-        `cpu` float NOT NULL,
-        `mem` float NOT NULL,
-        `vsz` int(11) NOT NULL,
-        `rss` int(11) NOT NULL,
-        `tty` varchar(32) NOT NULL,
-        `stat` varchar(32) NOT NULL,
-        `start` varchar(32) NOT NULL,
-        `time` varchar(32) NOT NULL,
-        `command` varchar(256) NOT NULL,
-        PRIMARY KEY (`rec_id`),
-        KEY `server_ping_index`(`server_name`,`ping_time`),
-        KEY `server_name_index`(`server_name`)
-) ENGINE=InnoDB
-DEFAULT CHARACTER SET=utf8 COLLATE=utf8_general_ci;
-*/
