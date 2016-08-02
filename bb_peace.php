@@ -28,7 +28,7 @@ class BigBrotherPeace
     		return $config;
     	}
 
-    	$bb_config_file='bb_config.php';
+    	$bb_config_file=__DIR__.'/bb_config.php';
     	
     	$config=array(
     		'server_api'=>'',
