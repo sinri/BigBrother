@@ -14,18 +14,22 @@ class BigBrotherPeace
             # code...
     }
 
-    public static function getConfig($bb_config_file=null){
+    public static function getConfig($config_key=null){
     	static $config=null;
 
     	if($config){
+    		if($config_key!==null){
+    			if(isset($config[$config_key])){
+    				return $config[$config_key];
+    			}else{
+    				return null;
+    			}
+    		}
     		return $config;
     	}
 
-    	if(empty($bb_config_file)){
-    		$bb_config_file='bb_config.php';
-    	}
-    	// $content=file_get_contents($bb_config_file);
-
+    	$bb_config_file='bb_config.php';
+    	
     	$config=array(
     		'server_api'=>'',
     		'client_name'=>'',
@@ -53,11 +57,18 @@ class BigBrotherPeace
 			@fclose($handle);
 		}
 
+		if($config_key!==null){
+			if(isset($config[$config_key])){
+				return $config[$config_key];
+			}else{
+				return null;
+			}
+		}
 		return $config;
     }
 
-    public static function getConfigOfServerApi($bb_config_file=null){
-    	$config=BigBrotherPeace::getConfig($bb_config_file);
+    public static function getConfigOfServerApi(){
+    	$config=BigBrotherPeace::getConfig();
     	return $config['server_api'];
     }
 
