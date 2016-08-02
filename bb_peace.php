@@ -116,9 +116,14 @@ class BigBrotherPeace
     	$config=BigBrotherPeace::getConfig();
     	$log_dir=$config['log_dir'];
     	$log_file=$log_dir.'/bb_'.date('Ymd').'.log';
-
+    	if(file_exists($log_file)){
+    		chmod($log_file, 0777);
+    	}
     	$fp = fopen($log_file, 'a');
 		fwrite($fp, "[".date('Y-m-d H:i:s')."|".$level."]".$content.PHP_EOL);
 		fclose($fp);
+		if(file_exists($log_file)){
+    		chmod($log_file, 0777);
+    	}
     }
 }
