@@ -171,6 +171,7 @@ foreach ($client_list as $client_index => $client_info) {
 			?>
 		</div>
 		<div id="detail_view_div">
+			<h3>In last 12 hours</h3>
 			<?php 
 			if(!empty($client_list)){
 				foreach ($client_list as $client_index => $client_info) {

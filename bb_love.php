@@ -326,9 +326,9 @@ class BigBrotherLove
 
         $option = array(
             'title'=> array(
-                'text'=> 'CPU-MEM',
-                'subtext'=> 'Updated '.date('Y-m-d H:i:s'),//'ERP Client',
-                'x'=> 'center'
+                'text'=> 'CPU-MEM'.' '.date('H:i:s'),
+                // 'subtext'=> 'Updated '.date('Y-m-d H:i:s'),//'ERP Client',
+                'x'=> 'left'
             ),
             'tooltip'=>array(
                 'trigger'=> 'axis',
@@ -338,7 +338,10 @@ class BigBrotherLove
             ),
             'legend'=> array(
                 'data'=>$legend_list,
-                'x'=> 'left',
+                // 'x'=> 'left',
+                // 'orient'=>'vertical',
+                'left'=>200,
+                // 'top'=>120,
             ),
             'toolbox'=> array(
                 'feature'=> array(
@@ -349,12 +352,12 @@ class BigBrotherLove
                 array(
                     'left'=> 50,
                     'right'=> 50,
-                    'height'=> '35%'
+                    'height'=> '35%',
                 ), array(
                     'left'=> 50,
                     'right'=> 50,
                     'top'=> '55%',
-                    'height'=> '35%'
+                    'height'=> '35%',
                 )
             ),
             'xAxis' => array(
