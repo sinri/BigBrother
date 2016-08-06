@@ -119,8 +119,10 @@ class BigBrotherLove
         }
 
         if($type=='daily'){
-            $sql="SELECT DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
-            -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
+            $sql="SELECT 
+                    DATE_FORMAT(`ping_time`, '%m-%d %H:%i') ping_time,
+                    -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 0 hour), '%m-%d %H:%i') ping_time,
+                    -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
                 FROM `server_process_cache`
@@ -133,8 +135,10 @@ class BigBrotherLove
             $title="Daily";
         }elseif($type=='recent_x_minutes'){
             $recent_min=intval($recent_min);
-            $sql="SELECT DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
-            -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
+            $sql="SELECT 
+                    DATE_FORMAT(ping_time, '%m-%d %H:%i') ping_time,
+                    -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 0 hour), '%m-%d %H:%i') ping_time,
+                    -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
                 FROM `server_process_cache`
@@ -151,6 +155,10 @@ class BigBrotherLove
         $set=BigBrotherPlenty::getDB()->getAll($sql);
         $data_cpu=array();
         $data_mem=array();
+        $min=date("m-d H:i",strtotime("-12 hour"));
+        $max=date("m-d H:i");
+        $has_min=false;
+        $has_max=false;
         foreach ($set as $item) {
             $data_cpu[]=array(
                 round($item['total_cpu'],2),
@@ -161,6 +169,16 @@ class BigBrotherLove
                 round($item['total_mem'],2),
                 $item['ping_time']
             );
+            if($item['ping_time']==$min)$has_min=true;
+            if($item['ping_time']==$max)$has_max=true;
+        }
+        if(!$has_min){
+            $data_cpu=array_merge(array(array(null,$min)),$data_cpu);
+            $data_mem=array_merge(array(array(null,$min)),$data_mem);
+        }
+        if(!$has_max){
+            $data_cpu[]=array(null,$max);
+            $data_mem[]=array(null,$max);
         }
 
         // Make option 
@@ -193,10 +211,17 @@ class BigBrotherLove
             'angleAxis' => array(
                 'type' => 'time',
                 'startAngle' => floor(-(date('g')*60+(intval('1'.date('i'))-100)-180)/60.0*30), //90 -> up 0 -> right
+                'max'=>date('m-d H:i'),
+                'min'=>date("m-d H:i",strtotime("-12 hour")),
             ),
             'radiusAxis' => array(
                 'min' => 0,
                 // 'max' => 50,
+                'zlevel'=>100,
+                'nameTextStyle'=>array(
+                    'color'=>'#FF0000',
+                    'fontWeight'=>'bold'
+                ),
             ),
             'series' => array(
                 (object)array(
@@ -204,7 +229,7 @@ class BigBrotherLove
                     'name' => 'cpu_line',
                     'type' => 'line',
                     'data' => $data_cpu,
-                    'smooth'=>true,
+                    // 'smooth'=>true,
                     'symbol' => 'circle',
                     // 'symbol_size'=>1,
                     // 'sampling'=>'average',
@@ -214,7 +239,7 @@ class BigBrotherLove
                     'name' => 'mem_line',
                     'type' => 'line',
                     'data' => $data_mem,
-                    'smooth'=>true,
+                    // 'smooth'=>true,
                     'symbol' => 'circle',
                     // 'symbol_size'=>1,
                     // 'sampling'=>'average',
@@ -262,8 +287,8 @@ class BigBrotherLove
                     $data[$cvalue]['cpu'][]=$clients[$cvalue]['total_cpu'];
                     $data[$cvalue]['mem'][]=$clients[$cvalue]['total_mem'];
                 }else{
-                    $data[$cvalue]['cpu'][]=100;//$clients[$cvalue]['total_cpu'];
-                    $data[$cvalue]['mem'][]=100;//$clients[$cvalue]['total_mem'];
+                    $data[$cvalue]['cpu'][]=null;//$data[$cvalue]['cpu'][count($data[$cvalue]['cpu'])-1];//-0.1;$clients[$cvalue]['total_cpu'];
+                    $data[$cvalue]['mem'][]=null;//$data[$cvalue]['cpu'][count($data[$cvalue]['cpu'])-1];//-0.1;//$clients[$cvalue]['total_mem'];
                 }
             }
         }
@@ -277,8 +302,12 @@ class BigBrotherLove
                 'name'=>$dk,
                 'type'=>'line',
                 'symbolSize'=> $symbolSize,
-                'hoverAnimation'=> false,
-                'data'=>$dv['cpu']
+                'data'=>$dv['cpu'],
+                // 'step'=>'middle',
+                // 'connectNulls'=>true,
+                'showAllSymbol'=>true,
+                'hoverAnimation'=>true,
+                'legendHoverLink'=>true,
             );
             $series[]=array(
                 'name'=>$dk,
@@ -286,8 +315,12 @@ class BigBrotherLove
                 'xAxisIndex'=> 1,
                 'yAxisIndex'=> 1,
                 'symbolSize'=> $symbolSize,
-                'hoverAnimation'=> false,
-                'data'=>$dv['mem']
+                'data'=>$dv['mem'],
+                // 'step'=>'middle',
+                // 'connectNulls'=>true,
+                'showAllSymbol'=>true,
+                'hoverAnimation'=>true,
+                'legendHoverLink'=>true,
             );
         }
 
@@ -305,7 +338,7 @@ class BigBrotherLove
             ),
             'legend'=> array(
                 'data'=>$legend_list,
-                'x'=> 'left'
+                'x'=> 'left',
             ),
             'toolbox'=> array(
                 'feature'=> array(
