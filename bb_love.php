@@ -109,7 +109,7 @@ class BigBrotherLove
 
     ///// ECharts Related, Make option
 
-    public function getRecentCpuMemStatus($server_name,$server_ip,$date=null,$type='daily',$recent_min=0){
+    public function echarts_getRecentCpuMemStatus($server_name,$server_ip,$date=null,$type='daily',$recent_min=0){
         $server_name=BigBrotherPlenty::getDB()->quote($server_name);
         $server_ip=BigBrotherPlenty::getDB()->quote($server_ip);
         if($date==null){
@@ -119,7 +119,8 @@ class BigBrotherLove
         }
 
         if($type=='daily'){
-            $sql="SELECT date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
+            $sql="SELECT DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
+            -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
                 FROM `server_process_cache`
@@ -127,18 +128,21 @@ class BigBrotherLove
                 and `server_ip`= {$server_ip}
                 and DATE(`ping_time`)= date({$date})
                 group by `ping_time`
+                order by ping_time
             ";
             $title="Daily";
         }elseif($type=='recent_x_minutes'){
             $recent_min=intval($recent_min);
-            $sql="SELECT date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
+            $sql="SELECT DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
+            -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
                 FROM `server_process_cache`
                 WHERE `server_name`= {$server_name}
                 and `server_ip`= {$server_ip}
-                and `ping_time`> date_sub({$date}, INTERVAL {$recent_min} minute)
+                and `ping_time`> date_sub(now(), INTERVAL {$recent_min} minute)
                 group by `ping_time`
+                order by ping_time
             ";
             $title="Recent";
         }
@@ -149,12 +153,12 @@ class BigBrotherLove
         $data_mem=array();
         foreach ($set as $item) {
             $data_cpu[]=array(
-                $item['total_cpu'],
+                round($item['total_cpu'],2),
                 //$item['mins']
                 $item['ping_time']
             );
             $data_mem[]=array(
-                $item['total_mem'],
+                round($item['total_mem'],2),
                 $item['ping_time']
             );
         }
@@ -169,6 +173,8 @@ class BigBrotherLove
                 'data' => array('cpu_line','mem_line'),
                 'top' => '5',
                 'right' => '5',
+                'orient' => 'vertical',
+                'padding' => 20
             ),
             'polar' => (object)array(
                 // 'radius'=>'50%'
@@ -179,9 +185,14 @@ class BigBrotherLove
                     'type' => 'cross'
                 )
             ),
+            'toolbox'=> array(
+                'feature'=> array(
+                    'saveAsImage'=> (object)array()
+                )
+            ),
             'angleAxis' => array(
                 'type' => 'time',
-                'startAngle' => 90
+                'startAngle' => floor(-(date('g')*60+(intval('1'.date('i'))-100)-180)/60.0*30), //90 -> up 0 -> right
             ),
             'radiusAxis' => array(
                 'min' => 0,
@@ -211,6 +222,139 @@ class BigBrotherLove
             )
         );
 
+        return json_encode($option);
+    }
+
+    public function echarts_getRecentInfoOfClients($minutes){
+        $minutes=intval($minutes);
+        $sql="SELECT 
+                -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%H:%i') ping_time,
+                DATE_FORMAT(`ping_time`, '%H:%i') ping_time,
+                server_name,server_ip,
+                sum(ifnull(cpu, 0)) total_cpu,
+                sum(ifnull(mem, 0)) total_mem
+            FROM `server_process_cache`
+            WHERE 1
+                and `ping_time`> date_sub(now(), INTERVAL {$minutes} minute)
+            group by server_name,`ping_time`
+            order by server_name,ping_time
+        ";
+        $set=BigBrotherPlenty::getDB()->getAll($sql);
+        $mapping=array();
+        $client_list=array();
+        foreach ($set as $item) {
+            if(!isset($mapping[$item['ping_time']])){
+                $mapping[$item['ping_time']]=array();
+            }
+            $mapping[$item['ping_time']][$item['server_name']]=$item;
+            $client_list[$item['server_name']]=$item['server_name'];
+        }
+        ksort($mapping);
+        $timeData=array();
+        $data=array();
+        foreach ($mapping as $ping_time => $clients) {
+            $timeData[]=$ping_time;
+            foreach ($client_list as $ckey => $cvalue) {
+                if(!isset($data[$cvalue])){
+                    $data[$cvalue]=array('cpu'=>array(),'mem'=>array());
+                }
+                if(isset($clients[$cvalue])){
+                    $data[$cvalue]['cpu'][]=$clients[$cvalue]['total_cpu'];
+                    $data[$cvalue]['mem'][]=$clients[$cvalue]['total_mem'];
+                }else{
+                    $data[$cvalue]['cpu'][]=100;//$clients[$cvalue]['total_cpu'];
+                    $data[$cvalue]['mem'][]=100;//$clients[$cvalue]['total_mem'];
+                }
+            }
+        }
+
+        $legend_list=array_values($client_list);
+
+        $series=array();
+        foreach ($data as $dk => $dv) {
+            $symbolSize=6;
+            $series[]=array(
+                'name'=>$dk,
+                'type'=>'line',
+                'symbolSize'=> $symbolSize,
+                'hoverAnimation'=> false,
+                'data'=>$dv['cpu']
+            );
+            $series[]=array(
+                'name'=>$dk,
+                'type'=>'line',
+                'xAxisIndex'=> 1,
+                'yAxisIndex'=> 1,
+                'symbolSize'=> $symbolSize,
+                'hoverAnimation'=> false,
+                'data'=>$dv['mem']
+            );
+        }
+
+        $option = array(
+            'title'=> array(
+                'text'=> 'CPU-MEM',
+                'subtext'=> 'Updated '.date('Y-m-d H:i:s'),//'ERP Client',
+                'x'=> 'center'
+            ),
+            'tooltip'=>array(
+                'trigger'=> 'axis',
+                'axisPointer'=>array(
+                    'animation'=> true
+                )
+            ),
+            'legend'=> array(
+                'data'=>$legend_list,
+                'x'=> 'left'
+            ),
+            'toolbox'=> array(
+                'feature'=> array(
+                    'saveAsImage'=> (object)array()
+                )
+            ),
+            'grid'=> array(
+                array(
+                    'left'=> 50,
+                    'right'=> 50,
+                    'height'=> '35%'
+                ), array(
+                    'left'=> 50,
+                    'right'=> 50,
+                    'top'=> '55%',
+                    'height'=> '35%'
+                )
+            ),
+            'xAxis' => array(
+                array(
+                    'type' => 'category',
+                    'boundaryGap' => false,
+                    'axisLine'=> array('onZero'=> true),
+                    'data'=> $timeData
+                ),
+                array(
+                    'gridIndex'=> 1,
+                    'type' => 'category',
+                    'boundaryGap' => false,
+                    'axisLine'=> array('onZero'=> true),
+                    'data'=> $timeData,
+                    'position'=> 'top'
+                )
+            ),
+            'yAxis' => array(
+                array(
+                    'name' => 'CPU%',
+                    'type' => 'value',
+                    // 'max' => 100
+                ),
+                array(
+                    'gridIndex'=> 1,
+                    'name' => 'MEM%',
+                    'type' => 'value',
+                    'inverse'=> true
+                )
+            ),
+            'series' => $series
+        );
         return json_encode($option);
     }
 }
