@@ -120,8 +120,8 @@ class BigBrotherLove
 
         if($type=='daily'){
             $sql="SELECT 
-                    DATE_FORMAT(`ping_time`, '%m-%d %H:%i') ping_time,
-                    -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 0 hour), '%m-%d %H:%i') ping_time,
+                    -- DATE_FORMAT(`ping_time`, '%m-%d %H:%i') ping_time,
+                    DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
                     -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
@@ -136,8 +136,8 @@ class BigBrotherLove
         }elseif($type=='recent_x_minutes'){
             $recent_min=intval($recent_min);
             $sql="SELECT 
-                    DATE_FORMAT(ping_time, '%m-%d %H:%i') ping_time,
-                    -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 0 hour), '%m-%d %H:%i') ping_time,
+                    -- DATE_FORMAT(ping_time, '%m-%d %H:%i') ping_time,
+                    DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%m-%d %H:%i') ping_time,
                     -- date_sub(`ping_time` ,INTERVAL 8 hour) ping_time,
                     sum(cpu) total_cpu,
                     sum(mem) total_mem
@@ -155,10 +155,10 @@ class BigBrotherLove
         $set=BigBrotherPlenty::getDB()->getAll($sql);
         $data_cpu=array();
         $data_mem=array();
-        $min=date("m-d H:i",strtotime("-12 hour"));
-        $max=date("m-d H:i");
-        $has_min=false;
-        $has_max=false;
+        // $min=date("m-d H:i",strtotime("-12 hour +1 minute"));
+        // $max=date("m-d H:i");
+        // $has_min=false;
+        // $has_max=false;
         foreach ($set as $item) {
             $data_cpu[]=array(
                 round($item['total_cpu'],2),
@@ -169,17 +169,17 @@ class BigBrotherLove
                 round($item['total_mem'],2),
                 $item['ping_time']
             );
-            if($item['ping_time']==$min)$has_min=true;
-            if($item['ping_time']==$max)$has_max=true;
+            // if($item['ping_time']==$min)$has_min=true;
+            // if($item['ping_time']==$max)$has_max=true;
         }
-        if(!$has_min){
-            $data_cpu=array_merge(array(array(null,$min)),$data_cpu);
-            $data_mem=array_merge(array(array(null,$min)),$data_mem);
-        }
-        if(!$has_max){
-            $data_cpu[]=array(null,$max);
-            $data_mem[]=array(null,$max);
-        }
+        // if(!$has_min){
+            // $data_cpu=array_merge(array(array(null,$min)),$data_cpu);
+            // $data_mem=array_merge(array(array(null,$min)),$data_mem);
+        // }
+        // if(!$has_max){
+            // $data_cpu[]=array(null,$max);
+            // $data_mem[]=array(null,$max);
+        // }
 
         // Make option 
 
@@ -210,9 +210,9 @@ class BigBrotherLove
             ),
             'angleAxis' => array(
                 'type' => 'time',
-                'startAngle' => floor(-(date('g')*60+(intval('1'.date('i'))-100)-180)/60.0*30), //90 -> up 0 -> right
-                'max'=>date('m-d H:i'),
-                'min'=>date("m-d H:i",strtotime("-12 hour")),
+                'startAngle' => floor(-(date('g')*60+(intval('1'.date('i'))-100)-180+1)/60.0*30), //90 -> up 0 -> right
+                'max'=>'dataMax',//date('m-d H:i'),
+                'min'=>'dataMin',//date("m-d H:i",strtotime("-12 hour")),
             ),
             'radiusAxis' => array(
                 'min' => 0,
@@ -301,26 +301,30 @@ class BigBrotherLove
             $series[]=array(
                 'name'=>$dk,
                 'type'=>'line',
+                'showSymbol'=>false,
                 'symbolSize'=> $symbolSize,
                 'data'=>$dv['cpu'],
                 // 'step'=>'middle',
-                // 'connectNulls'=>true,
-                'showAllSymbol'=>true,
+                'connectNulls'=>true,
+                // 'showAllSymbol'=>true,
                 'hoverAnimation'=>true,
                 'legendHoverLink'=>true,
+                'smooth'=>true,
             );
             $series[]=array(
                 'name'=>$dk,
                 'type'=>'line',
                 'xAxisIndex'=> 1,
                 'yAxisIndex'=> 1,
+                'showSymbol'=>false,
                 'symbolSize'=> $symbolSize,
                 'data'=>$dv['mem'],
                 // 'step'=>'middle',
-                // 'connectNulls'=>true,
-                'showAllSymbol'=>true,
+                'connectNulls'=>true,
+                // 'showAllSymbol'=>true,
                 'hoverAnimation'=>true,
                 'legendHoverLink'=>true,
+                'smooth'=>true,
             );
         }
 

@@ -65,6 +65,15 @@ foreach ($client_list as $client_index => $client_info) {
 		<script type="text/javascript">
 		var monitor_chart=null;
 		$(document).ready(function(){
+			//12小时状态
+			makeRecentChartDuty();
+			//实时监控
+			monitor_chart = echarts.init(document.getElementById('monitor_view'));
+        	refresh_monitor_chart();
+        	window.setInterval('refresh_monitor_chart()',30000);
+		})
+
+		function makeRecentChartDuty(){
 			<?php
 			if(!empty($client_list)){
 				foreach ($client_list as $client_index => $client_info) {
@@ -77,12 +86,10 @@ foreach ($client_list as $client_index => $client_info) {
 				}
 			}
 			?>
-			monitor_chart = echarts.init(document.getElementById('monitor_view'));
-        	refresh_monitor_chart();
-        	window.setInterval('refresh_monitor_chart()',30000);
-		})
+		}
 
 		function makeRecentChart(target_div,server_info){
+			echarts.dispose(document.getElementById(target_div));
 			var myChart = echarts.init(document.getElementById(target_div));
         	$.ajax({
 	        	url:'index.php?act=load_option_for_recent&server_name='+server_info.server_name+'&server_ip='+server_info.server_ip,
@@ -121,8 +128,8 @@ foreach ($client_list as $client_index => $client_info) {
 			height: 400px;
 			margin: auto 10px;
 			padding: 10px;
-			border: 1px solid green;
-			border-radius: 10px;
+			border: 1px solid lightgray;
+			/*border-radius: 10px;*/
 			/*box-sizing: content-box;*/
 		}
 		div.recent_view_div{
@@ -159,7 +166,14 @@ foreach ($client_list as $client_index => $client_info) {
 					<tr>
 						<td><?php echo $client_info['server_name']; ?></td>
 						<td><?php echo $client_info['server_ip']; ?></td>
-						<td><?php echo $client_info['last_ping_time']; ?></td>
+						<td><?php 
+						echo $client_info['last_ping_time']; 
+						$t1=strtotime($client_info['last_ping_time']);//echo "[$t1]";
+						$t2=strtotime(date('Y-m-d H:i:s'));//echo "[$t2]";
+						if($t2-$t1>=2*60){
+							echo "MIA since ".ceil(($t2-$t1)/60).'s ago';
+						}
+						?></td>
 					</tr>
 			<?php
 				}
@@ -171,7 +185,7 @@ foreach ($client_list as $client_index => $client_info) {
 			?>
 		</div>
 		<div id="detail_view_div">
-			<h3>In last 12 hours</h3>
+			<h3>In last 12 hours <button onclick="makeRecentChartDuty()">Refresh</button></h3>
 			<?php 
 			if(!empty($client_list)){
 				foreach ($client_list as $client_index => $client_info) {
