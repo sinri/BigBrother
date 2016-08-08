@@ -58,6 +58,14 @@ class BigBrotherPlenty
         }
     }
 
+    public static function killOldDaysRecords($daysBefore=3){
+        $daysBefore=intval($daysBefore);
+        if($daysBefore<3)throw new Exception("Too short", 1);
+        $sql="DELETE from `server_process_cache` where `ping_time` < date_sub(now(),INTERVAL {$daysBefore} day)";
+        $done=BigBrotherPlenty::getDB()->exec($sql);
+        return $done;
+    }
+
     public static function getDB(){
         static $db=null;
         if($db){

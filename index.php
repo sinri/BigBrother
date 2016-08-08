@@ -32,6 +32,12 @@ if($act=='load_option_for_recent'){
 	$option_json=BigBrotherLove::echarts_getRecentInfoOfClients($minutes);
 	echo $option_json;
 	exit();
+}elseif($act=='load_detail_for_pids'){
+	$server_name=BigBrotherLove::getRequest('server_name');
+	$time=BigBrotherLove::getRequest('time',date('Y-m-d H:i'));
+	$list=BigBrotherLove::getPidsForServerOnTime($server_name,$time);
+	echo json_encode($list);
+	exit();
 }
 
 // echo "This server is " . BigBrotherPeace::getConfig('client_name').PHP_EOL;
@@ -56,10 +62,16 @@ foreach ($client_list as $client_index => $client_info) {
 		#client_table {
 			border: 1px solid gray;
 			border-collapse: collapse;
+			width:90%;
+			margin: auto;
 		}
 		#client_table>tr,th,td{
 			border: 1px solid gray;
 			padding: 5px;
+		}
+		table.pids_table {
+			border: 1px solid gray;
+			border-collapse: collapse;
 		}
 		</style>
 		<script type="text/javascript">
@@ -108,6 +120,46 @@ foreach ($client_list as $client_index => $client_info) {
 	        	// 使用刚指定的配置项和数据显示图表。
 	        	monitor_chart.setOption(option);
 	        })
+    	}
+
+    	function load_detail(x){
+    		var server_name_td_id='#server_name_'+x;
+    		var time_condition_input_id='#time_condition_'+x;
+    		var load_detail_box_id='#load_detail_box';
+    		$(load_detail_box_id).html('');
+    		$.ajax({
+    			url:'index.php?act=load_detail_for_pids&server_name='+encodeURIComponent($(server_name_td_id).html())+'&time='+encodeURIComponent($(time_condition_input_id).val()),
+    			dataType:'json'
+    		}).done(function(data){
+    			// $(load_detail_box_id).html(JSON.stringify(data));
+    			console.log(data);
+    			var html='<h3>'+$(server_name_td_id).html()+' '+$(time_condition_input_id).val()+'</h3>';
+    			html+="<table class='pids_table'>";
+    			html+="<thead>";
+    			html+="<tr>";
+    			html+="<th>PID</th>";
+    			html+="<th>CPU</th>";
+    			html+="<th>MEM</th>";
+    			html+="<th>TIME</th>";
+    			html+="<th>COMMAND</th>";
+    			html+="</tr>"
+    			html+="</thead>";
+    			html+="<tbody>";
+    			for(var i=0;i<data.length;i++){
+    				var p=data[i];
+    				html+="<tr>";
+	    			html+="<td>"+p.pid+"</td>";
+	    			html+="<td>"+p.cpu+"</td>";
+	    			html+="<td>"+p.mem+"</td>";
+	    			html+="<td>"+p.time+"</td>";
+	    			html+="<td>"+p.command+"</td>";
+	    			html+="</tr>";
+    			}
+    			html+="</tbody>";
+    			html+="</table>";
+
+    			$(load_detail_box_id).html(html);
+    		})
     	}
 		</script>
 		<style type="text/css">
@@ -163,17 +215,23 @@ foreach ($client_list as $client_index => $client_info) {
 				<thead>
 					<tr>
 						<th>Server Name</th>
-						<th>IP</th>
+						<!-- <th>IP</th> -->
 						<th>Last Ping</th>
+						<th>Y-m-d H:i</th>
+						<th>Details</th>
 					</tr>
 				</thead>
 				<tbody>
 			<?php
-				foreach ($client_list as $client_info) {
+				foreach ($client_list as $client_index => $client_info) {
 			?>
 					<tr>
-						<td><?php echo $client_info['server_name']; ?></td>
-						<td><?php echo $client_info['server_ip']; ?></td>
+						<td>
+							<span id='server_name_<?php echo $client_index; ?>'><?php echo $client_info['server_name']; ?></span>
+							<br>
+							<span id='server_ip_<?php echo $client_index; ?>'><?php echo $client_info['server_ip']; ?></span>
+						</td>
+						<!-- <td><?php echo $client_info['server_ip']; ?></td> -->
 						<td><?php 
 						echo $client_info['last_ping_time']; 
 						$t1=strtotime($client_info['last_ping_time']);//echo "[$t1]";
@@ -182,6 +240,13 @@ foreach ($client_list as $client_index => $client_info) {
 							echo "MIA since ".ceil(($t2-$t1)/60).'s ago';
 						}
 						?></td>
+						<td>
+							<input type="text" id="time_condition_<?php echo $client_index; ?>">
+							<button onclick="load_detail(<?php echo $client_index; ?>)">Load</button>
+						</td>
+						<?php if($client_index==0){ ?>
+						<td id="load_detail_box" rowspan="<?php echo count($client_list); ?>"></td>
+						<?php } ?>
 					</tr>
 			<?php
 				}

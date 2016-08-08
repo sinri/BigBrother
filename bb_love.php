@@ -82,6 +82,19 @@ class BigBrotherLove
 		return $info_set;
     }
 
+    public static function getPidsForServerOnTime($server_name,$time){
+        if(empty($time)){
+            $time=date('Y-m-d H:i');
+        }
+        $sql="SELECT * FROM server_process_cache 
+            WHERE server_name='{$server_name}' 
+            and ping_time>='{$time}:00' and ping_time<='{$time}:59'
+        ";
+        $list=BigBrotherPlenty::getDB()->getAll($sql);
+        // echo $sql;print_r($list);die();
+        return $list;
+    }
+
     public static function makeProcTimeToSeconds($his){
     	$hi_pos=strpos($his, ':');
     	$is_pos=strpos($his, '.');
