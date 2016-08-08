@@ -111,6 +111,14 @@ foreach ($client_list as $client_index => $client_info) {
     	}
 		</script>
 		<style type="text/css">
+		h1 {
+			text-align: center;
+			font-family: cursive;
+		}
+		h2 {
+			text-align: center;
+			font-family: serif;
+		}
 		#monitor_div {
 			margin: auto;
 			padding: 20px;
