@@ -29,7 +29,8 @@ if($act=='load_option_for_recent'){
 	$minutes=BigBrotherLove::getRequest('minutes',60);
 	$minutes=intval($minutes);
 	if($minutes<10)$minutes=10;
-	$option_json=BigBrotherLove::echarts_getRecentInfoOfClients($minutes);
+	$option_json=BigBrotherLove::echarts_getRecentInfoOfClients($minutes,$warn_level);
+	// echo json_encode(array('option_object'=>json_encode($option_json),'warn_level'=>$warn_level));
 	echo $option_json;
 	exit();
 }elseif($act=='load_detail_for_pids'){
@@ -119,6 +120,21 @@ foreach ($client_list as $client_index => $client_info) {
 	        }).done(function(option){
 	        	// 使用刚指定的配置项和数据显示图表。
 	        	monitor_chart.setOption(option);
+	        	// alert(option.WARNING_LEVEL);
+	        	$("#monitor_marning_level").html(option.WARNING_LEVEL);
+	        	if(option.WARNING_LEVEL=='SEVERE'){
+	        		$("#monitor_div").css('border','4px solid red');
+	        		$("#monitor_marning_level").css('background-color','red');
+	        		$("#monitor_marning_level").css('color','white');
+	        	}else if(option.WARNING_LEVEL=='ELEVATED'){
+	        		$("#monitor_div").css('border','2px solid orange');
+	        		$("#monitor_marning_level").css('background-color','orange');
+	        		$("#monitor_marning_level").css('color','blue');
+	        	}else{
+	        		$("#monitor_div").css('border','none');
+	        		$("#monitor_marning_level").css('background-color','white');
+	        		$("#monitor_marning_level").css('color','black');
+	        	}
 	        })
     	}
 
@@ -201,7 +217,7 @@ foreach ($client_list as $client_index => $client_info) {
 	</head>
 	<body>
 		<h1>Big Brother Web Server Monitor System</h1>
-		<h2>BIG BROTHER IS WATCHING YOU!</h2>
+		<h2>BIG BROTHER IS WATCHING YOU! - <span id="monitor_marning_level">LOADING</span></h2>
 		<hr>
 		<div id="monitor_div">
     		<div id="monitor_view" style="width: 98%;height:600px;"></div>

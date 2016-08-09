@@ -263,8 +263,13 @@ class BigBrotherLove
         return json_encode($option);
     }
 
-    public function echarts_getRecentInfoOfClients($minutes){
+    /**
+     * @param minutes default 60
+     * @param warn_level default NORMAL, and ELEVATED (HIGH USAGE), SEVERE (CLIENT DIED)
+     **/
+    public function echarts_getRecentInfoOfClients($minutes,&$warn_level='NORAML'){
         $minutes=intval($minutes);
+        $warn_level='NORMAL';
         $sql="SELECT 
                 -- DATE_FORMAT(date_sub(`ping_time`, INTERVAL 8 hour), '%H:%i') ping_time,
                 DATE_FORMAT(`ping_time`, '%H:%i') ping_time,
@@ -290,19 +295,48 @@ class BigBrotherLove
         ksort($mapping);
         $timeData=array();
         $data=array();
+        $level=array();
         foreach ($mapping as $ping_time => $clients) {
             $timeData[]=$ping_time;
             foreach ($client_list as $ckey => $cvalue) {
                 if(!isset($data[$cvalue])){
                     $data[$cvalue]=array('cpu'=>array(),'mem'=>array());
                 }
+                if(!isset($level[$cvalue])){
+                    $level[$cvalue]=array(
+                        'died'=>0,
+                        'cpu'=>0,
+                        'mem'=>0,
+                    );
+                }
                 if(isset($clients[$cvalue])){
                     $data[$cvalue]['cpu'][]=$clients[$cvalue]['total_cpu'];
                     $data[$cvalue]['mem'][]=$clients[$cvalue]['total_mem'];
+                    //WARNING
+                    $level[$cvalue]['died']=0;
+                    $level[$cvalue]['cpu']=$clients[$cvalue]['total_cpu'];
+                    $level[$cvalue]['mem']=$clients[$cvalue]['total_mem'];
                 }else{
                     $data[$cvalue]['cpu'][]=null;//$data[$cvalue]['cpu'][count($data[$cvalue]['cpu'])-1];//-0.1;$clients[$cvalue]['total_cpu'];
                     $data[$cvalue]['mem'][]=null;//$data[$cvalue]['cpu'][count($data[$cvalue]['cpu'])-1];//-0.1;//$clients[$cvalue]['total_mem'];
+                    //WARNING
+                    $level[$cvalue]['died']+=1;
                 }
+            }
+        }
+
+        // check warning level
+        foreach ($level as $lk => $lv) {
+            if($lv['died']>2){
+                $warn_level='SEVERE';
+                break;
+            }
+            if($lv['cpu']>90 || $lv['mem']>90){
+                $warn_level='SEVERE';
+                break;
+            }
+            if($lv['cpu']>70 || $lv['mem']>70){
+                $warn_level='ELEVATED';
             }
         }
 
@@ -406,7 +440,8 @@ class BigBrotherLove
                     'inverse'=> true
                 )
             ),
-            'series' => $series
+            'series' => $series,
+            'WARNING_LEVEL'=> $warn_level,
         );
         return json_encode($option);
     }
